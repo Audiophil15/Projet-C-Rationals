@@ -11,44 +11,6 @@
 
 // template <typename T>
 
-
-// class IntRationals : public testing::TestWithParam<std::tuple<Rational<int>, int, int>> {};
-
-// TEST_P(IntRationals, Constructors) {
-//   Rational<int> ratio(std::get<0>(GetParam()));
-//   int num = std::get<1>(GetParam());
-//   int denom = std::get<2>(GetParam());
-//   EXPECT_EQ(ratio.num(), num) << "Numerator : " << ratio.num() << " != " << num << " !";
-//   EXPECT_EQ(ratio.denom(), denom) << "Denominator : " << ratio.denom() << " != " << denom << " !";
-// }
-
-// INSTANTIATE_TEST_SUITE_P(
-//     Rationals,
-//     IntRationals,
-//     testing::Values(
-//       std::make_tuple(Rational<int>(4,5),4,5),
-//       std::make_tuple(Rational<int>(4,-5),-4,5),
-//       std::make_tuple(Rational<int>(-4,-5),4,5),
-//       std::make_tuple(Rational<int>(4.52,5.12),4,5)));
-
-// class UintRationals : public testing::TestWithParam<std::tuple<Rational<uint>, uint, uint>> {};
-
-// TEST_P(UintRationals, Constructors) {
-//   Rational<uint> ratio(std::get<0>(GetParam()));
-//   int num = std::get<1>(GetParam());
-//   int denom = std::get<2>(GetParam());
-//   EXPECT_EQ(ratio.num(), num) << "Numerator : " << ratio.num() << " != " << num << " !";
-//   EXPECT_EQ(ratio.denom(), denom) << "Denominator : " << ratio.denom() << " != " << denom << " !";
-// }
-
-// INSTANTIATE_TEST_SUITE_P(
-//     Rationals,
-//     UintRationals,
-//     testing::Values(
-//       std::make_tuple(Rational<uint>(4,5),4,5),
-//       std::make_tuple(Rational<uint>(4.52,5.12),4,5)));
-
-
 // By class fixture
 template <typename T>
 class RationalsTest :public testing::Test {
@@ -61,32 +23,40 @@ class RationalsTest :public testing::Test {
 	std::vector<T> expectedNum;
 	std::vector<T> expectedDenom;
 
-	void defaultConstructorTest(){
+	void defaultConstructorIsZeroTest(){
 		Rational<T> r;
 		EXPECT_EQ(r.num(), 0) << "Numerator : " << r.num() << ", expected 0 !";
 		EXPECT_EQ(r.denom(), 1) << "Denominator : " << r.denom() << ", expected 1 !";
 	}
 
-	void singleValueConstructorTest(T innum, T expnum){
+	void singleValueConstructorTest(T innum, T expectedNum){
 		Rational<T> r(innum);
-		EXPECT_EQ(r.num(), expnum) << "Inputs : " << innum << ", " << expnum;
-		EXPECT_EQ(r.denom(), 1) << "Inputs : " << innum << ", " << expnum;
+		EXPECT_EQ(r.num(), expectedNum) << "Inputs : " << innum << ", " << expectedNum;
+		EXPECT_EQ(r.denom(), 1) << "Inputs : " << innum << ", " << expectedNum;
 	}
 
-	void twoValuesConstructorTest(T innum, T indenom, T expnum, T expdenom){
+	void twoValuesConstructorTest(T innum, T indenom, T expectedNum, T expectedDenom){
 		Rational<T> r(innum, indenom);
-		EXPECT_EQ(r.num(), expnum) << "Inputs : " << innum << ", " << indenom << ", " << expnum << ", " << expdenom;
-		EXPECT_EQ(r.denom(), expdenom) << "Inputs : " << innum << ", " << indenom << ", " << expnum << ", " << expdenom;
+		EXPECT_EQ(r.num(), expectedNum) << "Inputs : " << innum << ", " << indenom << ", " << expectedNum << ", " << expectedDenom;
+		EXPECT_EQ(r.denom(), expectedDenom) << "Inputs : " << innum << ", " << indenom << ", " << expectedNum << ", " << expectedDenom;
 	}
+
+	void verifyValues(Rational<T> r, T expectedNum, T expectedDenom){
+		EXPECT_EQ(r.num(), expectedNum) << "r = " << r << " != " << expectedNum << ", " << expectedDenom;
+		EXPECT_EQ(r.denom(), expectedDenom) << "r = " << r << " != " << expectedNum << ", " << expectedDenom;
+	}
+
 };
 
-using Integers = ::testing::Types<int, long, uint, long uint>;
+using Integers = ::testing::Types<int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t>;
 
 TYPED_TEST_SUITE(RationalsTest, Integers);
 
-TYPED_TEST(RationalsTest, DefaultConstructorTest){
+	/** Test about all constructors */
 
-	RationalsTest<TypeParam>::defaultConstructorTest();
+TYPED_TEST(RationalsTest, DefaultConstructorIsZeroTest){
+
+	RationalsTest<TypeParam>::defaultConstructorIsZeroTest();
 
 }
 
@@ -111,93 +81,82 @@ TYPED_TEST(RationalsTest, TwoValuesConstructorTest){
 		RationalsTest<TypeParam>::twoValuesConstructorTest(4,-5,-4,5);
 		RationalsTest<TypeParam>::twoValuesConstructorTest(-4,-5,4,5);
 	}
+
 }
+
+TYPED_TEST(RationalsTest, simplifyTest){
+
+	Rational<TypeParam> ratio = rational::simplify(Rational<TypeParam>(12,6));
+	EXPECT_EQ(2, ratio.num());
+	EXPECT_EQ(1, ratio.denom());
+
+	if (std::numeric_limits<TypeParam>::is_signed){
+		Rational<TypeParam> ratio = rational::simplify(Rational<TypeParam>(-12,6));
+		EXPECT_EQ(-2, ratio.num());
+		EXPECT_EQ(1, ratio.denom());
+	}
+
+}
+
+TYPED_TEST(RationalsTest, operatorPlus){
+
+	Rational<TypeParam> r = Rational<TypeParam>(5,2) + Rational<TypeParam>(3,4);
+	RationalsTest<TypeParam>::verifyValues(r, 13, 4);
+
+	if (std::numeric_limits<TypeParam>::is_signed){
+		r = Rational<TypeParam>(-5,2) + Rational<TypeParam>(3,4);
+		RationalsTest<TypeParam>::verifyValues(r, -7, 4);
+	}
+
+}
+
+TYPED_TEST(RationalsTest, operatorMinus){
+
+	Rational<TypeParam> r = Rational<TypeParam>(5,2) - Rational<TypeParam>(3,4);
+	RationalsTest<TypeParam>::verifyValues(r, 7, 4);
+
+	if (std::numeric_limits<TypeParam>::is_signed){
+		r = Rational<TypeParam>(-5,2) - Rational<TypeParam>(3,4);
+		RationalsTest<TypeParam>::verifyValues(r, -13, 4);
+	}
+
+}
+
+TYPED_TEST(RationalsTest, operatorMultiply){
+
+	Rational<TypeParam> r = Rational<TypeParam>(5,2) * Rational<TypeParam>(2,3);
+	RationalsTest<TypeParam>::verifyValues(r, 5,3);
+
+	if (std::numeric_limits<TypeParam>::is_signed){
+		r = Rational<TypeParam>(-5,2) * Rational<TypeParam>(2,3);
+		RationalsTest<TypeParam>::verifyValues(r, -5,3);
+	}
+}
+
+TYPED_TEST(RationalsTest, operatorDivide){
+
+	Rational<TypeParam> r = Rational<TypeParam>(5,2) / Rational<TypeParam>(3,2);
+	RationalsTest<TypeParam>::verifyValues(r, 5, 3);
+
+	if (std::numeric_limits<TypeParam>::is_signed){
+		r = Rational<TypeParam>(-5,2) / Rational<TypeParam>(3,2);
+		RationalsTest<TypeParam>::verifyValues(r, -5, 3);
+	}
+}
+
 // End By class fixture
-
-// TEST(rationals_lib_test_constructor, constructor_int){
-
-// 	/** A rational of integers from 4 and 5 */
-// 	Rational<int> ratio(4,5);
-// 	EXPECT_EQ(4, ratioInt.num());
-// 	EXPECT_EQ(5, ratioInt.denom());
-
-// }
-
-// TEST(rationals_lib_test_constructor, constructor_int_negative_denominator){
-
-// 	/** A rational of integers from 4 and -5 */
-// 	Rational<int> ratio(4,-5);
-// 	EXPECT_EQ(-4, ratioNeg1.num());
-// 	EXPECT_EQ(5, ratioNeg1.denom());
-
-// }
-
-// TEST(rationals_lib_test_constructor, constructor_int_negative_num_and_denom){
-
-// 	/** A rational of integers from -4 and -5 */
-// 	Rational<int> ratio(-4,-5);
-// 	EXPECT_EQ(4, ratioNeg2.num());
-// 	EXPECT_EQ(5, ratioNeg2.denom());
-
-// }
-
-// TEST(rationals_lib_test_constructor, constructor_float_to_int){
-
-// 	/** A rational of integers from 4.56 and 5.2 */
-// 	Rational<int> ratio(4.56, 5.2);
-// 	EXPECT_EQ(4, ratioFToI.num());
-// 	EXPECT_EQ(5, ratioFToI.denom());
-
-// }
-
-// TEST(rationals_lib_test_constructor, constructor_long){
-
-// 	/** A rational of longs from (long)4 and (long)5 */
-// 	Rational<long> ratio((long)4, (long)5);
-// 	EXPECT_EQ(4, ratioLong.num());
-// 	EXPECT_EQ(5, ratioLong.denom());
-
-// }
-
-// TEST(rationals_lib_test_constructor, constructor_uint){
-
-// 	/** A rational of unsigned integers from -3 and 5 */
-// 	Rational<uint> ratio(-3, 5);
-// 	EXPECT_EQ(-3, ratioUint.num());
-// 	EXPECT_EQ(5, ratioUint.denom());
-
-// }
-
-// TEST(rationals_lib_test, namespace){
-
-// 	EXPECT_NO_THROW(Rational<int> ratio2 = rational::simplify(Rational<int>(12,6)));
-
-// }
-
-// TEST(rationals_lib_test, operators){
-
-// 	Rational<int> r1(1,5);
-// 	Rational<int> r2(5,2);
-// 	Rational<int> r3 = r1;
-
-// 	EXPECT_EQ(r1 == r3, true);
-// 	EXPECT_EQ(r1 == r2, false);
-// 	// EXPECT_EQ()
-// 	// std::cout << "1/5 + 5/2 = " << r1+r2 << std::endl;
-// 	// std::cout << "1/5 - 5/2 = " << r1-r2 << std::endl;
-// 	// std::cout << "1/5 * 5/2 = " << r1*r2 << std::endl;
-// 	// std::cout << "1/5 / 5/2 = " << r1/r2 << std::endl;
-// 	// std::cout << "- 1/5 = " << -r1 << std::endl;
-
-// }
 
 int main(int argc, char **argv){
 
-	std::cout << "Running tests upon the rationals minilib." << std::endl << std::endl;
+	std::cout << "Running tests upon the rationals minilib." << "\n" << "\n";
 
-	/** Test about all constructors */
+	std::cout << rational::inf<long long int> << "\n";
+	std::cout << rational::inf<int>*Rational(5,1) << "\n";
+	std::cout << Rational(1,5)/Rational(0, 2) << "\n";
+	std::cout << 5/Rational(0, 2) << "\n";
+	std::cout << rational::decimalToRational<int, double>(5.2) << "\n";
 
-	// std::cout << std::endl;
+
 
 	testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
